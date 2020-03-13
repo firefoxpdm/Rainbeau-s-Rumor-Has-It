@@ -132,7 +132,7 @@ namespace Rumor_Code {
 			result = false;
 			return result;
 		}
-		public override string GetExplanation() {
+		public override TaggedString GetExplanation() {
 			string text = Translator.Translate("RUMOR.CliquesFormed");
 			int num = 0;
 			foreach (Map current in Find.Maps) {
@@ -151,7 +151,7 @@ namespace Rumor_Code {
 					}
 				}
 			}
-			return text;
+			return new TaggedString(text);
 		}
 		public override string GetLabel() {
 			return Translator.Translate("RUMOR.Cliques");
@@ -184,7 +184,7 @@ namespace Rumor_Code {
 			}
 			return result;
 		}
-		public override string GetExplanation() {
+		public override TaggedString GetExplanation() {
 			string text = "";
 			if (Controller.Settings.allowDefections.Equals(true)) {
 				text = Translator.Translate("RUMOR.DefectionRiskMsg");
@@ -198,7 +198,7 @@ namespace Rumor_Code {
 					text = text + "\n     " + current2.Name.ToStringShort;
 				}
 			}
-			return text;
+			return new TaggedString(text);
 		}
 		public override string GetLabel() {
 			string result;
@@ -239,6 +239,7 @@ namespace Rumor_Code {
 			string letterText;
 			string letterLabel;
 			LetterDef letterDef;
+            LookTargets lookTargets;
 			if (initiator == recipient) {
 				Log.Warning(initiator + " tried to interact with self, interaction=" + intDef.defName);
 				result = false;
@@ -260,7 +261,7 @@ namespace Rumor_Code {
 				bool flag = false;
 				if (recipient.RaceProps.Humanlike) { }
 				if (!flag) {
-					intDef.Worker.Interacted(initiator, recipient, list, out letterText, out letterLabel, out letterDef);
+					intDef.Worker.Interacted(initiator, recipient, list, out letterText, out letterLabel, out letterDef, out lookTargets);
 				}
 				Find.PlayLog.Add(new PlayLogEntry_Interaction(intDef, initiator, recipient, list));
 				result = true;
@@ -333,7 +334,7 @@ namespace Rumor_Code {
 			try {
 				result = def.Worker.RandomSelectionWeight(p1, p2);
 			}
-			catch (NullReferenceException nullReferenceException) {
+			catch (NullReferenceException) {
 				result = 0.025f;
 			}
 			return result;
@@ -540,10 +541,10 @@ namespace Rumor_Code {
 				p2
 			});
 			if (PawnUtility.ShouldSendNotificationAbout(p1) || PawnUtility.ShouldSendNotificationAbout(p2)) {
-				Find.LetterStack.ReceiveLetter(Translator.Translate("LetterLabelBreakup"), Translator.Translate("LetterNoLongerLovers", new object[] {
+				Find.LetterStack.ReceiveLetter(Translator.Translate("LetterLabelBreakup"), TranslatorFormattedStringExtensions.Translate("LetterNoLongerLovers", 
 					p1.LabelShort,
 					p2.LabelShort
-				}), LetterDefOf.NegativeEvent, p1, null);
+				), LetterDefOf.NegativeEvent, p1, null);
 			}
 		}
 		private static float NewRandomColorFromSpectrum(Faction faction) {
@@ -596,7 +597,7 @@ namespace Rumor_Code {
 				Find.WorldObjects.Add(factionBase);
 			}
 			Find.World.factionManager.Add(faction);
-			sourceMap.pawnDestinationReservationManager.RegisterFaction(faction);
+			sourceMap.pawnDestinationReservationManager.GetPawnDestinationSetFor(faction);
 			return faction;
 		}
 		protected override bool TryExecuteWorker(IncidentParms parms) {
@@ -714,11 +715,12 @@ namespace Rumor_Code {
 			}
 			return result;
 		}
-		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef) {
+		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef, out LookTargets lookTargets) {
 			letterLabel = null;
 			letterText = null;
 			letterDef = null;
-			IEnumerable<Thought_Memory> enumerable = ThirdPartyManager.GetMemoriesWithDef(recipient, ThoughtDefOf.Insulted);
+            lookTargets = null;
+            IEnumerable<Thought_Memory> enumerable = ThirdPartyManager.GetMemoriesWithDef(recipient, ThoughtDefOf.Insulted);
 			enumerable = enumerable.Concat(ThirdPartyManager.GetMemoriesWithDef(recipient, ThoughtDefOf.HarmedMe));
 			enumerable = enumerable.Concat(ThirdPartyManager.GetMemoriesWithDef(recipient, ThoughtDefOf.HadAngeringFight));
 			enumerable = enumerable.Concat(ThirdPartyManager.GetMemoriesWithDef(recipient, RumorsThoughtDefOf.HadLiesToldAboutMe));
@@ -767,11 +769,12 @@ namespace Rumor_Code {
 			}
 			return result;
 		}
-		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef) {
+		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef, out LookTargets lookTargets) {
 			letterLabel = null;
 			letterText = null;
 			letterDef = null;
-			if (this.p3 != null) {
+            lookTargets = null;
+            if (this.p3 != null) {
 				bool flag = (float)Rand.Range(0, 100) < ((float)initiator.relations.OpinionOf(recipient) + 20f + 1.5f * (float)recipient.skills.GetSkill(SkillDefOf.Social).Level) / 1.5f;
 				bool flag2 = (float)Rand.Range(0, 100) < ((float)recipient.relations.OpinionOf(initiator) + 20f + 1.5f * (float)initiator.skills.GetSkill(SkillDefOf.Social).Level) / 1.5f;
 				float num = (float)initiator.relations.OpinionOf(this.p3);
@@ -861,11 +864,12 @@ namespace Rumor_Code {
 			}
 			return result;
 		}
-		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef) {
+		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef, out LookTargets lookTargets) {
 			letterLabel = null;
 			letterText = null;
 			letterDef = null;
-			string adultCulturalAdjective = ThirdPartyManager.GetAdultCulturalAdjective(initiator);
+            lookTargets = null;
+            string adultCulturalAdjective = ThirdPartyManager.GetAdultCulturalAdjective(initiator);
 			string adultCulturalAdjective2 = ThirdPartyManager.GetAdultCulturalAdjective(recipient);
 			string childhoodCulturalAdjective = ThirdPartyManager.GetChildhoodCulturalAdjective(initiator);
 			string childhoodCulturalAdjective2 = ThirdPartyManager.GetChildhoodCulturalAdjective(recipient);
@@ -926,10 +930,11 @@ namespace Rumor_Code {
 			}
 			return result;
 		}
-		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef) {
+		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef, out LookTargets lookTargets) {
 			letterLabel = null;
 			letterText = null;
 			letterDef = null;
+            lookTargets = null;
 			IEnumerable<Thought_Memory> enumerable = ThirdPartyManager.GetMemoriesWithDef(recipient, ThoughtDefOf.Insulted);
 			enumerable = enumerable.Concat(ThirdPartyManager.GetMemoriesWithDef(recipient, ThoughtDefOf.HarmedMe));
 			enumerable = enumerable.Concat(ThirdPartyManager.GetMemoriesWithDef(recipient, ThoughtDefOf.HadAngeringFight));
@@ -1015,10 +1020,11 @@ namespace Rumor_Code {
 			}
 			return result;
 		}
-		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef) {
+		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef, out LookTargets lookTargets) {
 			letterLabel = null;
 			letterText = null;
 			letterDef = null;
+            lookTargets = null;
 			if (this.p3 != null) {
 				if (this.p3 != null) {
 					IEnumerable<Thought_Memory> enumerable = ThirdPartyManager.GetMemoriesWithDef(this.p3, RumorsThoughtDefOf.SharedSecret);
@@ -1096,10 +1102,11 @@ namespace Rumor_Code {
 			}
 			return result;
 		}
-		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef) {
+		public override void Interacted(Pawn initiator, Pawn recipient, List<RulePackDef> extraSentencePacks, out string letterText, out string letterLabel, out LetterDef letterDef, out LookTargets lookTargets) {
 			letterLabel = null;
 			letterText = null;
 			letterDef = null;
+            lookTargets = null;
 			Pawn pawn = this.ChooseGossipTarget(initiator, recipient);
 			if (pawn != null) {
 				if (3 + initiator.skills.GetSkill(SkillDefOf.Social).Level > Rand.Range(0, 25)) {
